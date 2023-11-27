@@ -27,14 +27,19 @@ conn.commit()
 
 
 
-
-
+# initializatiom
 window = Tk()
 window.title("Contact Management System")
 # window.geometry("600x400")
 
 frame = Frame(window)
 frame.pack()
+
+
+
+# ===============================================================================
+# ===============================USER INFO SECTION==================================
+# ===============================================================================
 
 # Saving user info
 user_info_frame = LabelFrame(frame, text="User Information")
@@ -68,17 +73,17 @@ title_combobox.current(0)
 title_label.grid(row= 2, column= 0)
 title_combobox.grid(row= 3, column= 0)
 
-# age_label = Label(user_info_frame, text= "Age")
-# age_spinbox = Spinbox(user_info_frame, from_= 0, to= 100)
-
-# age_label.grid(row= 2, column= 1)
-# age_spinbox.grid(row= 3, column= 1)
-
 # creating space between the widget
 for widget in user_info_frame.winfo_children():
     widget.grid_configure(padx = 10, pady= 5)
 
-# creating next widget
+
+
+
+# ===============================================================================
+# ===============================CONTACT SECTION==================================
+# ===============================================================================
+# creating contact widget
 contact_info_frame = LabelFrame(frame, text="Contact Information")
 contact_info_frame.grid(row= 1, column= 0,padx= 10, pady=10, sticky='w')
 
@@ -91,6 +96,7 @@ phone_number_code_combobox.current(0)
 
 phone_number_entry = Entry(contact_info_frame)
 phone_number_entry.grid(row= 2, column= 1)
+
 
 # storage
 temp_username = StringVar()
@@ -107,6 +113,9 @@ for widget in contact_info_frame.winfo_children():
 
 
 
+# ===============================================================================
+# ===============================DATA INPUT SECTION==================================
+# ===============================================================================
 # taking data
 
 import re
@@ -187,7 +196,16 @@ def display_text():
     Label.config(text= string)
 
 def clear():
-    print("suces")
+    first_name_entry.delete(0, END)
+    last_name_entry.delete(0, END)
+    company_name_entry.delete(0, END)
+
+    title_combobox.set("")  # Clear combobox selection
+    title_combobox.current(0)
+    phone_number_code_combobox.set("")  # Clear combobox selection
+    phone_number_code_combobox.current(0)
+    phone_number_entry.delete(0, END)
+    email_entry.delete(0, END)
 
 
 
@@ -223,8 +241,58 @@ def update_id_numbers():
         tree.item(item, values=(index,) + tree.item(item, 'values')[1:])
 
 def update():
-    print("ok")
+    selected_item = tree.selection()
 
+    if not selected_item:
+        messagebox.showerror('Error', 'No item is selected')
+        return
+    
+    # FETCH selected item data
+    selected_data = tree.item(selected_item)['values']
+
+    # Populate entry widgets with selected data
+    title_combobox.set(selected_data[1])
+    first_name_entry.insert(0, selected_data[2])
+    last_name_entry.insert(0, selected_data[3])
+    company_name_entry.insert(0,selected_data[4])
+
+    phone_number_code_combobox.set(selected_data[5])
+    phone_number_entry.insert(0,selected_data[6])
+    email_entry.insert(0,selected_data[7])
+
+    save_button.config(state=DISABLED)
+
+    def update_selected_data():
+        # FETCH UPDATE DATA
+        update_data = (
+            title_combobox.get(),
+            first_name_entry.get(),
+            last_name_entry.get(),
+            company_name_entry.get(),
+            phone_number_code_combobox.get(),
+            phone_number_entry.get(),
+            email_entry.get()
+        )
+
+        # Update data in the database
+        cursor.execute('''
+        UPDATE users SET title=?, first_name=?, last_name=?, company=?, phone_number_code=?, phone_number=?, email=? WHERE id=?''', update_data + (selected_data[0],))
+        conn.commit()
+        # update data in the treeview
+        tree.item(selected_item, values=(selected_data[0],) + update_data)
+        # enable save button after update
+        save_button.config(state=NORMAL)
+    
+    # Create an update button for the user to confirm
+    update_button = Button(button_frame, text="Update Data", command=update_selected_data)
+    update_button.grid(row=1,column=4)
+
+
+
+
+# ===============================================================================
+# ===============================BUTTON SECTION==================================
+# ===============================================================================
 # Button widget frame
 button_frame = Label(frame, text="Submit Field")
 button_frame.grid(row=3,column=0)
@@ -239,6 +307,11 @@ save_button.grid(row= 1, column= 1)
 delete_button.grid(row= 1, column= 2)
 update_button.grid(row= 1, column= 3)
 
+
+
+# ===============================================================================
+# ===============================DISPLAY SECTION==================================
+# ===============================================================================
 
 # Display field
 display_info_frame = LabelFrame(frame, text= "Contact Book")
@@ -271,7 +344,7 @@ tree_frame.grid(row=0, column=0, sticky="nsew")
 tree = ttk.Treeview(tree_frame)
 tree["columns"] = ("ID","Title","First Name","Last Name","Company","Phone","Number","Email Address")
 # set column width
-column_widths = [50,100,100,100,100,80,120,200]
+column_widths = [50,100,100,100,150,80,120,200]
 
 for col,width in zip(tree["columns"], column_widths):
     tree.heading(col, text= col)
